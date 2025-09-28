@@ -7,6 +7,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
+import httpx # Убедитесь, что httpx импортирован
 
 # --- Инициализация и конфигурация ---
 
@@ -62,28 +63,46 @@ class PostResponse(BaseModel):
 
 async def get_latest_news(topic: str) -> str:
     """
-    Получает последние новости по заданной теме с помощью Currents API.
-    Форматирует результат в удобную строку для передачи в OpenAI.
+    Получает последние новости по заданной теме напрямую через Currents API,
+    используя httpx. Форматирует результат в удобную строку для OpenAI.
     """
+    # URL для запроса к API
+    api_url = "https://api.currentsapi.services/v1/search"
+    
+    # Параметры запроса
+    params = {
+        "keywords": topic,
+        "language": "ru",
+        "apiKey": CURRENTS_API_KEY, # Ключ из .env
+        "limit": 5
+    }
+
     try:
-        # Запрашиваем новости на русском языке
-        news = await currents_client.search(
-            keywords=topic,
-            language='ru',
-            limit=5  # Ограничимся 5 новостями, чтобы контекст не был слишком большим
-        )
-        
+        # Используем асинхронный клиент httpx, что идеально для FastAPI
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_url, params=params)
+            
+            # Вызовет ошибку, если API вернет статус 4xx или 5xx
+            response.raise_for_status() 
+            
+            news_data = response.json()
+
         # Проверяем, нашлись ли новости
-        if not news or not news.get('news'):
+        if not news_data or not news_data.get('news'):
             return "Не удалось найти актуальные новости по данной теме."
 
         # Форматируем новости в пронумерованный список
-        news_list = [f"{i+1}. {article['title']}: {article['description']}" 
-                     for i, article in enumerate(news['news'])]
+        news_list = [f"{i+1}. {article['title']}: {article.get('description', 'Нет описания.')}" 
+                     for i, article in enumerate(news_data['news'])]
         
         return "\n".join(news_list)
+        
+    except httpx.HTTPStatusError as e:
+        # Ошибка ответа от API (например, 401 - неверный ключ, 429 - много запросов)
+        print(f"Ошибка HTTP при запросе к Currents API: {e.response.status_code} - {e.response.text}")
+        return f"API новостей вернуло ошибку {e.response.status_code}."
     except Exception as e:
-        # В случае ошибки при обращении к Currents API, логируем ее и возвращаем уведомление
+        # Любая другая ошибка (проблемы с сетью, некорректный JSON и т.д.)
         print(f"Ошибка при запросе к Currents API: {e}")
         return "Произошла ошибка при получении новостей."
 
