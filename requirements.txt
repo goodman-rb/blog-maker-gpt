@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+openai
+currentsapi
+python-dotenv
+requests
+httpx
+tiktoken
+pydantic
