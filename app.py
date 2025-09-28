@@ -2,7 +2,6 @@
 
 import os
 import openai
-import currentsapi
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
@@ -27,9 +26,6 @@ if not CURRENTS_API_KEY:
 # Инициализируем асинхронный клиент OpenAI
 # Использование async клиента предпочтительнее в асинхронных фреймворках, как FastAPI
 client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-
-# Инициализируем клиент Currents API
-currents_client = currentsapi.CurrentsApi(api_key=CURRENTS_API_KEY)
 
 # Создаем экземпляр FastAPI приложения
 app = FastAPI(
