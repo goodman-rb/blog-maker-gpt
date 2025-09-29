@@ -141,7 +141,7 @@ async def generate_blog_content(topic: str, news_context: str) -> dict:
         response_post = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt_post}],
-            max_tokens=2048,
+            max_tokens=1600,
             n=1,
             temperature=0.7,
         )
